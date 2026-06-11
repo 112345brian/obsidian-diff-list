@@ -33,15 +33,21 @@ function isFileExcluded(app: App, filePath: string | undefined, settings: DiffLi
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
 
-// Lines that contain any cursor head/anchor — replace decorations are skipped
-// on these lines so the cursor is never snapped to a widget boundary.
-function cursorLineNumbers(view: EditorView): Set<number> {
-  const lines = new Set<number>();
+// Cursor character positions — a replace decoration is skipped only when a
+// cursor head or anchor falls inside [from, to], preventing CM6 from snapping
+// the cursor to the widget boundary.  Checking the exact range (not the whole
+// line) means decorations on the rest of the line stay visible.
+function cursorPositions(view: EditorView): number[] {
+  const positions: number[] = [];
   for (const r of view.state.selection.ranges) {
-    lines.add(view.state.doc.lineAt(r.head).number);
-    if (!r.empty) lines.add(view.state.doc.lineAt(r.anchor).number);
+    positions.push(r.head);
+    if (!r.empty) positions.push(r.anchor);
   }
-  return lines;
+  return positions;
+}
+
+function cursorInRange(cursors: number[], from: number, to: number): boolean {
+  return cursors.some(p => p >= from && p <= to);
 }
 
 // ─── Feature 1: Block Obsidian's automatic ordered-list renumbering ───────────
@@ -157,7 +163,7 @@ function buildGroupDecorations(
   const doc = view.state.doc;
   const pending: Array<{ from: number; to: number; deco: Decoration }> = [];
   const visitedGroupStarts = new Set<number>();
-  const cursorLines = cursorLineNumbers(view);
+  const cursors = cursorPositions(view);
 
   for (const { from, to } of view.visibleRanges) {
     let pos = from;
@@ -189,8 +195,9 @@ function buildGroupDecorations(
             const gm = config.lineRegex.exec(gLine.text);
             if (!gm || config.getIndent(gm) !== groupIndent) break;
 
-            if (config.needsDecoration(counter, firstMatch, gm) && !cursorLines.has(lineNum)) {
+            if (config.needsDecoration(counter, firstMatch, gm)) {
               const span = config.makeReplaceSpan(gLine, groupIndent, gm);
+              if (cursorInRange(cursors, span.from, span.to)) { counter++; lineNum++; continue; }
               pending.push({
                 from: span.from,
                 to: span.to,
