@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting, editorInfoField } from 'obsidian';
 import type { MarkdownPostProcessorContext } from 'obsidian';
-import { EditorState, RangeSetBuilder, Transaction } from '@codemirror/state';
+import { EditorState, Prec, RangeSetBuilder, Transaction } from '@codemirror/state';
 import type { Extension, Line, TransactionSpec } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType } from '@codemirror/view';
 import type { DecorationSet, PluginValue, ViewUpdate } from '@codemirror/view';
@@ -133,6 +133,8 @@ interface ListGroupConfig {
   makeLabel(counter: number, groupFirstMatch: RegExpMatchArray): string;
   makeReplaceSpan(line: Line, indent: string, m: RegExpMatchArray): { from: number; to: number };
   needsDecoration(counter: number, groupFirstMatch: RegExpMatchArray, m: RegExpMatchArray): boolean;
+  // When set, a line decoration with this class is added to every item in the group.
+  lineClass?: string;
 }
 
 class ListLabelWidget extends WidgetType {
@@ -195,6 +197,15 @@ function buildGroupDecorations(
             const gm = config.lineRegex.exec(gLine.text);
             if (!gm || config.getIndent(gm) !== groupIndent) break;
 
+            // Line decoration (e.g. CSS list-item styling) applied to every group item.
+            if (config.lineClass) {
+              pending.push({
+                from: gLine.from,
+                to: gLine.from,
+                deco: Decoration.line({ class: config.lineClass }),
+              });
+            }
+
             if (config.needsDecoration(counter, firstMatch, gm)) {
               const span = config.makeReplaceSpan(gLine, groupIndent, gm);
               if (cursorInRange(cursors, span.from, span.to)) { counter++; lineNum++; continue; }
@@ -233,7 +244,7 @@ function makeListViewPlugin(config: ListGroupConfig, plugin: DiffListPlugin): Ex
         this.decorations = buildGroupDecorations(u.view, config, plugin);
     }
   }
-  return ViewPlugin.fromClass(GroupListPluginValue, { decorations: v => v.decorations });
+  return Prec.highest(ViewPlugin.fromClass(GroupListPluginValue, { decorations: v => v.decorations }));
 }
 
 // Numeric list config: displays "1. 1. 1." as "1. 2. 3." in the editor.
@@ -250,6 +261,8 @@ const numericListConfig: ListGroupConfig = {
 };
 
 // Alpha list config: displays "a. a. a." as "a. b. c." in the editor.
+// lineClass gives each item list-item styling in Live Preview (since "a. " is not
+// valid markdown list syntax and Obsidian's parser doesn't style it as a list).
 const alphaListConfig: ListGroupConfig = {
   lineRegex: /^(\s*)a\. /,
   getIndent: m => m[1],
@@ -259,6 +272,7 @@ const alphaListConfig: ListGroupConfig = {
     to: line.from + indent.length + 1, // replace just the 'a' character
   }),
   needsDecoration: counter => counter > 0,
+  lineClass: 'diff-list-alpha-item',
 };
 
 // ─── Feature 2b: MarkdownPostProcessor for reading view ───────────────────────

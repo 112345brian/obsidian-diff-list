@@ -1,0 +1,8 @@
+/* Alpha list items (a. a. a.) in Live Preview.
+   Mirrors Obsidian's HyperMD list-item indentation so "a. b. c." lines
+   look visually consistent with numeric ordered list items. */
+
+.cm-editor .cm-line.diff-list-alpha-item {
+  padding-left: 2em;
+  text-indent: -2em;
+}
