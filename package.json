@@ -1,0 +1,21 @@
+{
+  "name": "obsidian-diff-list",
+  "version": "1.0.0",
+  "description": "Prevents automatic list renumbering and adds 'a. a. a.' lettered list support.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+    "test": "node --import jiti/register tests/fixtures.ts"
+  },
+  "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
+    "@types/node": "^22.0.0",
+    "builtin-modules": "3.3.0",
+    "esbuild": "0.25.5",
+    "jiti": "^2.7.0",
+    "obsidian": "1.13.0",
+    "typescript": "5.8.3"
+  }
+}

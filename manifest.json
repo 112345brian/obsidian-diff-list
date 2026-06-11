@@ -1,0 +1,10 @@
+{
+  "id": "diff-list",
+  "name": "Diff List",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Keeps ordered lists as 1. 1. 1. in source for clean git diffs while rendering them as 1. 2. 3., plus a. a. a. lettered list support.",
+  "author": "112345brian",
+  "authorUrl": "https://github.com/112345brian/",
+  "isDesktopOnly": false
+}
